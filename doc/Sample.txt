@@ -1,0 +1,293 @@
+
+Send to invitees: http://whenisgood.net/sk349sz
+Results: http://whenisgood.net/sk349sz/results/j44a7ey
+
+This file should contain sample output.
+
+get doc/Sample.txt wololo.txt
+get Sample.txt wololo.txt
+
+post doc/sdong9-hw4.pdf lol.pdf
+
+The following below was my final draft of my Project 1 README hashed into
+the first draft of my Project 2 README. Now, it's used to test my FTP.
+
+.
+.
+.
+.
+.
+
+/-------------------------------
+| Susanna Dong
+| sdong9@gatech.edu
+| CS 3251 - Section A
+| Programming Assignment 2
+| Due 25 November 2015
+--------------------------------/
+
+
+// TODO replace the bank app stuff with whatever the ToC is
+----- Table of Contents -----
+- Filenames and Descriptions
+- References
+- Compiling and Running Files
+- Sample Input
+- DTP Protocol Changes
+- MagicFTP Protocol
+- Bugs and Limitations
+
+
+----- Filenames and Descriptions -----
+- DTPServerSocket.java
+- DTPSocket.java
+- Client.java
+- Packet.java
+- Sample.txt:           what you're reading right now!
+
+
+----- References -----
+- https://docs.oracle.com/javase/tutorial/networking/sockets/
+    [Starting point to writing sockets in Java. Lots of references to the Java 8 API.]
+- http://rosettacode.org/wiki/MD5#Java
+    [Used for MD5 hashing.]
+- My boyfriend
+    [Who gave me advice to use DataInputStream and some other Java socket tidbits.
+    Saved me 2+ hours of coding. Best advice ever!]
+
+
+----- Compiling and Running Files -----
+To compile the programs, cd to the directory with the Java files and run the command
+    javac *.java
+This should compile all .java files.
+Note: This works when compiling in JDK 1.8.0_51 and running in JRE 1.8.0_60.
+Also, this code was compiled and run on a Windows 8 machine.
+
+To run the client/server, you must have the following files together
+(otherwise the main method will not run!):
+- ServerTcp*, FakeDatabase
+- RemoteBankTcp*
+- ServerUdp*, FakeDatabase
+- RemoteBankUdp*
+* indicates that the main method is located in this class.
+
+Please run the following commands to initiate the client/server:
+    java ServerTcp [port] [-d?]
+    java RemoteBankTcp [ip:port] [username] [password] [deposit/withdraw] [money] [-d?]
+If you want to run UDP, replace "Tcp" with "Udp".
+For examples, please look at the "Sample Input" section.
+
+
+----- Sample input -----
+...
+
+
+* Debugging
+When not using the -d tag:
+- Server should be slient.
+- Client will only display the final message.
+
+
+[Please replace the IP/port with any valid value.]
+[It works across different computers - I tested it!]
+
+* Working TCP
+java ServerTcp 5555 -d
+java RemoteBankTcp 127.0.0.1:5555 susanna dong deposit 27.50 -d
+
+java ServerTcp 1234
+java RemoteBankTcp localhost:1234 vladimir smirnov withdraw 125
+
+* Working UDP
+java ServerUdp 3333
+java RemoteBankUdp 127.0.0.1:3333 susanna dong deposit 27.50
+
+java ServerUdp 1234 -d
+java RemoteBankUdp localhost:1234 vladimir smirnov withdraw 125 -d
+
+* User authorization failed in TCP
+java ServerTcp 5555 -d
+java RemoteBankTcp 127.0.0.1:5555 bear bear deposit 27.50 -d
+
+* User authorization failed in UDP
+java ServerTcp 1234 -d
+java RemoteBankTcp localhost:1234 bear bear withdraw 125 -d
+
+* Client cannot connect to server
+Simply run the client command without the server running
+
+
+----- Application Protocol -----
+
+--- General ---
+
+* Flow of Execution
+[For the simplicity of the discussion, I will refer the two entities as client
+and server even though they're technically equivalent in terms of sending and
+receiving messages.]
+
+This assumes the client has already checked that the parameters are valid.
+
+The client will send a message "Hello!"x110
+    "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+    + "Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!Hello!"
+This message lets the server know that the client wants to do business with
+the server. If the message does not exactly match these specifications, the
+server will reject the client.
+
+If correct, the server will send a 64-length challenge string. The client should
+respond by sending the username and the MD5 hashed string of the username, password,
+and challenge concatenation.
+
+If the authentication is good, the server will send a message
+"Authenticated! Welcome [username]". Then, the client can send the transaction.
+
+The server will perform the transaction by sending a message back to the client.
+All deposits will result in a successful transaction. A withdraw is only successful if
+the username has enough money in the bank account. If not, the server will not perform
+the transaction but will send a message containing the username's current account balance.
+
+The client should exit afterwards.
+
+
+* Packet exchange and message formatting
+1. Client sends the "Hello!"x110 message to the server.
+
+2. Server sends a packet containing:
+        Challenge:[64-byte string of random characters]
+
+3. Client sends a packet containing
+        Challenge:[challenge string]
+        Answer:[username],[MD5-hashed answer]
+
+4. Server sends a message saying:
+        Authenticated! Welcome [username]
+            or
+        Invalid username/password.
+    [Note: in TCP, the server will automatically close the socket.]
+    [In UDP, the client must explicitly exit when receiving authentication failed.]
+
+5. Client sends a packet containing:
+        Challenge:[challenge string]
+        Answer:[username],[MD5-hashed answer]
+        Transaction:[deposit/withdraw] [money]
+
+6. Server sends a packet containing:
+        
+        Your transaction of [withdraw/deposit] [money] was successful.
+        Your new account balance is now [balance]
+            or
+        You cannot withdraw more than you have in your bank account!
+        Your current account balance is [balance]
+
+[Note: for the packet messages, follow the exact syntax.
+This is so both the client and server can appropriately parse the packet message.]
+
+
+* Packet encoding
+All messages must encode in UTF-8.
+
+
+* Exception Handling
+The following are a list of possible exceptions and the way the client/server handles:
+
+In all cases, there should be a message that says "Exiting..." if an error occurred
+and is handled by the code (instead of crashing).
+
+- Invalid arguments
+    - IP/portNo must me formatted as [ip/hostname]:[port]
+        where the IP/hostname is valid and the port number is 0-65536.
+    - Username and password should contain at least 1 character.
+    - Action must be deposit/withdraw.
+    - Money must be greater than 0 and can be written as a decimal.
+    - The debug tag -d is optional and must be placed at the end of the command.
+    *** If any of the arguments are invalid, the client will exit.
+
+- Client cannot find/connect to server
+    - In TCP, the client will wait to connect to the server. It will timeout after a
+        certain amount of seconds.
+    - In UDP, the client will attempt to resend the message. If the number of retries
+        is maxed out, the client will timeout and should exit.
+
+- Invalid welcome message
+    - If the client does not send "Hello!"x110 to the server, the server will either
+        close the socket (TCP) or ignore the message (UDP). The client should exit.
+        The server should continue running.
+
+- User authorization failed
+    - If the client possesses invalid username/password, the server will send a message
+        to the client about "Invalid username/password" and will either close the
+        socket (TCP) or continue sending the message when the client retries (UDP).
+        The client should exit/give up, while the server should continue running.
+
+- Odd errors
+    - There is an exception if the MD5 hash breaks. In that case, the client or server
+        will exit.
+
+
+--- TCP ---
+
+For sending a packet
+1. The string message will be converted into a byte array in UTF-8 encoding.
+2. The end host will determine the length of the byte array as a 4-byte integer
+    and transform it to a 4-byte array.
+3. The end host will send the message length to the other end host.
+    The other end host will keep track of the message length.
+4. The end host will send the message via a byte array to the other end host.
+
+For receiving a packet
+1. The end host will be anticipating a 4-byte integer. This is the message
+    length and the end host is expected to keep track of the number.
+2. The end host will start reading the bit stream into the buffer. The end host
+    should take what's in the buffer, convert the information into a String
+    (with UTF-8 encoding), and store the information elsewhere.
+3. The end host should tally how many bytes were read. The end host should
+    continue reading until the number of bytes read equals the message length
+    sent earlier.
+
+
+--- UDP ---
+
+The client is responsible for retransmitting packets - the server will respond
+accordingly based upon the contents of the packet.
+The default is TIMEOUT = 5s, MAX_RETRY = 3. Alteration of timeout time
+and number of retries can be found in RemoteBankUdp.java.
+
+As an extra precaution, the client should check to make sure the packet(s) it receives
+are coming from the server. It should also look for key words in the packet
+to prevent accidentally processing a duplicate packet from the server. If the
+packet sent is a duplicate, the client should retry.
+
+
+
+----- Bugs and Limitations -----
+
+- General -
+- Because of the way that the application parses messages based on keywords, the user
+    can potentially mess up the parsing if certain keywords are typed into the cmd...
+
+- TCP -
+- The message length is constrained by the max length of a 4-byte integer
+    (2^32 bits of info).
+- The current setup only allows 1 client to be processed by the server at a time.
+    (e.g. The server will accept another client once it is done serving the first.)
+
+
+- UDP -
+- Program assumes that only 1 datagram will be sent, where the max datagram message
+    length can be 999 bytes of information.
+- Since the server will only respond when the client sends a packet, there's an issue
+    where if the datagram sending the transaction confirmation has been dropped,
+    the client will retransmit the transaction packet and the server will re-process
+    the transaction. The message (not the server) contains the state.
+
+
+
